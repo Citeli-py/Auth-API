@@ -4,7 +4,8 @@ class UsersController < ApplicationController
   def register
     user = User.new(user_params)
     if user.save
-      render json: { message: 'User registered successfully', user: user }, status: :created
+      token = user.generate_token
+      render json: { message: 'User registered successfully', user: {id: user.id, email: user.email, token: token} }, status: :created
     else
       render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
     end
@@ -15,9 +16,35 @@ class UsersController < ApplicationController
 
     if user&.authenticate(user_params[:password])
       token = user.generate_token
-      render json: { message: 'Login successful', token: token }, status: :ok
+      render json: { message: 'Login successful', user: {id: user.id, email: user.email, token: token} }, status: :ok
     else
       render json: { errors: ['Invalid credentials'] }, status: :unauthorized
+    end
+  end
+
+  def forgot
+    user = User.find_by(email: forgot_params[:email])
+    if user.nil?
+      render json: { errors: ['Invalid Login'] }, status: :unprocessable_entity
+      return
+    end
+
+    if not user.authenticate(forgot_params[:old_password])
+      render json: { errors: ['Invalid Login'] }, status: :unprocessable_entity
+      return
+    end
+
+    if forgot_params[:password] != forgot_params[:password_confirmation]
+      render json: { errors: ['New passwords don\'t match'] }, status: :unprocessable_entity
+      return
+    end
+
+    user.password = forgot_params[:password]
+
+    if user.save()
+      render json: { message: 'Password change sucess' }, status: :ok
+    else
+      render json: { message: 'Can\'t change password' }, status: :error
     end
   end
 
@@ -26,6 +53,10 @@ class UsersController < ApplicationController
   end
 
   private
+
+  def forgot_params
+    params.require(:user).permit(:email, :old_password, :password, :password_confirmation)
+  end
 
   def user_params
     params.require(:user).permit(:email, :password)
