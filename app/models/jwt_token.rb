@@ -13,7 +13,7 @@ class JwtToken < ApplicationRecord
     decoded_payload = JSON.parse(Base64.urlsafe_decode64(payload))
 
     # Verificar se o token expirou
-    if Time.at(decoded_payload['exp']) < Time.now
+    if decoded_payload['exp'].to_i < Time.now.to_i
       raise 'Token has expired'
     end
 
