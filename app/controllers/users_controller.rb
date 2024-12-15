@@ -74,21 +74,21 @@ class UsersController < ApplicationController
 
     token = extract_token_from_header
     if token.nil?
-      render json: { errors: "Token is missing" }, status: :unauthorized
+      render json: { error: "Token is missing" }, status: :unauthorized
       return
     end
 
     jwt_token = JwtToken.find_by(token: token)
     if jwt_token.nil?
-      render json: { errors: "Token is invalid" }, status: :unauthorized
+      render json: { error: "Token is invalid" }, status: :unauthorized
       return
     end
 
-    result = jwt_token.decode_token
-    if result[:error]
-      # Token expirado ou inválido
-      render json: { errors: [result[:error]] }, status: :unauthorized
+    begin
+      JwtToken.decode(token)
+    rescue => e
+      render json: { error: e }, status: :unauthorized
     end
-  end
 
+  end
 end
