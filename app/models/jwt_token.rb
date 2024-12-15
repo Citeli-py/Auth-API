@@ -32,7 +32,7 @@ class JwtToken < ApplicationRecord
   def expired?
     payload = JwtToken.decode(self.token)
     payload[:exp] < Time.now.to_i
-  rescue => e
+  rescue
     # Retorna verdadeiro caso ocorra qualquer erro ao decodificar
     true
   end
