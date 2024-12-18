@@ -16,7 +16,8 @@ Esta é uma API simples de autenticação construída com Ruby on Rails. Ela ofe
 {
   "user": {
     "email": "cici@example.com",
-    "password": "12345678"
+    "password": "12345678",
+    "password_confirmation": "12345678"
   }
 }
 ```
