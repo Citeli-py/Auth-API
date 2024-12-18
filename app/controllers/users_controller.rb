@@ -2,6 +2,11 @@ class UsersController < ApplicationController
   before_action :validate_token, only: [:restricted] # Validação do token para ações protegidas
 
   def register
+    if user_params[:password] != user_params[:password_confirmation]
+      render json: {errors: ["Passwords don't match"]},  status: :unprocessable_entity
+      return
+    end
+
     user = User.new(user_params)
     if user.save
       token = user.generate_token
@@ -59,7 +64,7 @@ class UsersController < ApplicationController
   end
 
   def user_params
-    params.require(:user).permit(:email, :password)
+    params.require(:user).permit(:email, :password, :password_confirmation)
   end
 
   def extract_token_from_header
