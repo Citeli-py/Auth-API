@@ -25,7 +25,8 @@ class PasswordResetsController < ApplicationController
     end
 
     if !confirm_password
-      render json: { error: 'Passwords don\'t match'}
+      render json: { error: 'Passwords don\'t match'}, status: :unprocessable_entity
+      return
     end
 
     user = password_reset.user
