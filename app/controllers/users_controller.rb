@@ -1,5 +1,5 @@
 class UsersController < ApplicationController
-  before_action :validate_token, only: [:restricted] # Validação do token para ações protegidas
+  before_action :validate_user_token, only: [:restricted, :destroy_user, :logout] # Validação do token para ações protegidas
 
   def register
     if user_params[:password] != user_params[:password_confirmation]
@@ -9,8 +9,8 @@ class UsersController < ApplicationController
 
     user = User.new(user_params)
     if user.save
-      token = user.generate_token
-      render json: { message: 'User registered successfully', user: {id: user.id, email: user.email, token: token} }, status: :created
+      UserMailer.confirmation_email(user).deliver_now
+      render json: { message: 'User registered successfully, confirm your email', user: {id: user.id, email: user.email} }, status: :created
     else
       render json: { errors: user.errors.full_messages }, status: :unprocessable_entity
     end
@@ -18,6 +18,16 @@ class UsersController < ApplicationController
 
   def login
     user = User.find_by(email: user_params[:email])
+
+    if user.nil?
+      render json: { errors: ['User don\'t exist'] }, status: :not_found
+      return
+    end
+
+    if !UserService.emailValid?(user)
+      render json: { errors: ['Email not confirmed'] }, status: :unauthorized
+      return
+    end
 
     if user&.authenticate(user_params[:password])
       token = user.generate_token
@@ -27,7 +37,7 @@ class UsersController < ApplicationController
     end
   end
 
-  def forgot
+  def change_password
     user = User.find_by(email: forgot_params[:email])
     if user.nil?
       render json: { errors: ['Invalid Login'] }, status: :unprocessable_entity
@@ -49,8 +59,33 @@ class UsersController < ApplicationController
     if user.save()
       render json: { message: 'Password change sucess' }, status: :ok
     else
-      render json: { message: 'Can\'t change password' }, status: :error
+      render json: { message: 'Can\'t change password' }, status: :unprocessable_entity
     end
+  end
+
+  def destroy_user
+    if @user.destroy
+      render json: { message: "User Destroyed"}, status: :ok
+    else
+      render json: { message: "Can\'t destroy User"}, status: :unprocessable_entity
+    end
+  end
+
+
+  def logout
+    jwt_token = JwtToken.find_by(user_id: @user.id)
+
+    if jwt_token.nil?
+      render json: { message: "Token not found"}, status: :not_found
+      return
+    end
+
+    if jwt_token.remover_token
+      render json: { message: "User logged out"}, status: :ok
+    else
+      render json: { message: "Can\'t make changes"}, status: :unprocessable_entity
+    end
+
   end
 
   def restricted
@@ -67,33 +102,13 @@ class UsersController < ApplicationController
     params.require(:user).permit(:email, :password, :password_confirmation)
   end
 
-  def extract_token_from_header
-    # Pega o token Bearer do cabeçalho Authorization
-    auth_header = request.headers['Authorization']
-    # O formato esperado é 'Bearer <token>', então pegamos a segunda parte
-    token = auth_header.to_s.split(' ').last if auth_header
-    token
-  end
+  def validate_user_token
+    result = UserService.validate_token(request)
 
-  def validate_token
-
-    token = extract_token_from_header
-    if token.nil?
-      render json: { error: "Token is missing" }, status: :unauthorized
-      return
+    if result[:status] != :ok
+      render json: { error: result[:error] }, status: result[:status]
+    else
+      @user = result[:user]
     end
-
-    jwt_token = JwtToken.find_by(token: token)
-    if jwt_token.nil?
-      render json: { error: "Token is invalid" }, status: :unauthorized
-      return
-    end
-
-    begin
-      JwtToken.decode(token)
-    rescue => e
-      render json: { error: e }, status: :unauthorized
-    end
-
   end
 end
