@@ -9,6 +9,7 @@ class User < ApplicationRecord
 
   has_one :jwt_token, dependent: :destroy
   has_one :email_confirmation, dependent: :destroy
+  has_one :password_reset, dependent: :destroy
 
   def generate_token
 
