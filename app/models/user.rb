@@ -5,21 +5,28 @@ class User < ApplicationRecord
   validates :email, presence: true, uniqueness: true
   validates :password, presence: true, length: { minimum: 6 }
 
-  has_one :jwt_token
+  after_create :generate_token, :create_email_confirmation
+
+  has_one :jwt_token, dependent: :destroy
+  has_one :email_confirmation, dependent: :destroy
 
   def generate_token
 
-    if not (self.jwt_token.nil? or self.jwt_token.expired?)
-      return self.jwt_token.token
+    ActiveRecord::Base.transaction do
+
+      if not self.jwt_token.nil?
+        self.jwt_token.destroy
+      end
+
+      token = JwtToken.encode({user_id: self.id, NONCE: SecureRandom.uuid})
+      self.jwt_token = JwtToken.create!(user: self, token: token)
+      return token
     end
 
-    if not self.jwt_token.nil?
-      self.jwt_token.destroy()
-    end
+  end
 
-    token = JwtToken.encode({user_id: self.id})
-    self.jwt_token = JwtToken.create!(user: self, token: token)
-    token
+  def create_email_confirmation
+    EmailConfirmation.create!(user: self);
   end
 
 end
