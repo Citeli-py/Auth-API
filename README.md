@@ -4,6 +4,8 @@ Esta é uma API simples de autenticação construída com Ruby on Rails. Ela ofe
 
 ---
 
+## Em reforma
+
 ## **Endpoints**
 
 ### **1. Registro de Usuário**
@@ -88,7 +90,7 @@ Authorization: Bearer <token>
 
 ### 4. Redefinição de Senha
 
-- URL: /forgot
+- URL: /change_password
 - Método: POST
 - Descrição: Atualiza a senha de um usuário.
 
