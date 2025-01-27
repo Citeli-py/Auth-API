@@ -4,7 +4,7 @@ require "jwt"
 
 class JwtToken < ApplicationRecord
   belongs_to :user
-  validates :token, presence: true
+  #validates :token, presence: true
 
   SECRET = Rails.application.secret_key_base
   EXP = 10.minutes.from_now
@@ -35,5 +35,10 @@ class JwtToken < ApplicationRecord
   rescue
     # Retorna verdadeiro caso ocorra qualquer erro ao decodificar
     true
+  end
+
+  def remover_token
+    self.token = nil
+    self.save
   end
 end
